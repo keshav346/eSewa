@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CircleCheck as CheckCircle, Download, Share, MoveHorizontal as MoreHorizontal, CreditCard, Smartphone, Building, Zap, Wallet, User, Phone } from 'lucide-react-native';
 import { useBalance } from '@/contexts/BalanceContext';
 import { useProfile } from '@/contexts/ProfileContext';
+import { usePaymentHistory } from '@/contexts/PaymentHistoryContext';
 
 export default function PaymentSuccessScreen() {
   const params = useLocalSearchParams();
   const { formatBalance } = useBalance();
   const { profileData } = useProfile();
+  const { addPayment } = usePaymentHistory();
+  
   const { 
     type, 
     phoneNumber, 
@@ -17,6 +20,8 @@ export default function PaymentSuccessScreen() {
     accountName,
     customerNumber,
     customerName,
+    passengerName,
+    studentName,
     amount, 
     operator,
     bank,
@@ -29,6 +34,31 @@ export default function PaymentSuccessScreen() {
     remarks
   } = params;
 
+  // Add payment to history when component mounts
+  useEffect(() => {
+    const addToHistory = async () => {
+      const paymentData = {
+        type: type as any,
+        title: getTransactionTitle(),
+        subtitle: getTransactionSubtitle(),
+        amount: parseFloat(amount as string),
+        status: 'completed' as const,
+        date: date as string,
+        time: time as string,
+        transactionId: transactionCode as string,
+        recipient: getRecipient(),
+        provider: getProvider(),
+        icon: getServiceIcon(),
+        color: getServiceColor(),
+        category: getCategory()
+      };
+
+      await addPayment(paymentData);
+    };
+
+    addToHistory();
+  }, []);
+
   const handleDone = () => {
     router.replace('/(tabs)');
   };
@@ -38,7 +68,7 @@ export default function PaymentSuccessScreen() {
     console.log('Raise issue');
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -49,32 +79,90 @@ export default function PaymentSuccessScreen() {
 
   const getServiceIcon = () => {
     switch (type) {
-      case 'topup':
-        return Smartphone;
-      case 'bank-transfer':
-        return Building;
+      case 'topup': return '📱';
+      case 'electricity': return '⚡';
+      case 'water': return '💧';
+      case 'internet': return '🌐';
+      case 'bank-transfer': return '🏦';
+      case 'load-money': return '💰';
+      case 'airlines': return '✈️';
+      case 'bus': return '🚌';
+      case 'tv': return '📺';
+      case 'school': return '🎓';
+      default: return '💳';
+    }
+  };
+
+  const getServiceColor = () => {
+    switch (type) {
+      case 'topup': return '#7C3AED';
+      case 'electricity': return '#EAB308';
+      case 'water': return '#3B82F6';
+      case 'internet': return '#059669';
+      case 'bank-transfer': return '#1E40AF';
+      case 'load-money': return '#059669';
+      case 'airlines': return '#DC2626';
+      case 'bus': return '#F59E0B';
+      case 'tv': return '#7C3AED';
+      case 'school': return '#EA580C';
+      default: return '#64748b';
+    }
+  };
+
+  const getCategory = () => {
+    switch (type) {
+      case 'topup': return 'topup';
       case 'electricity':
-        return Zap;
-      case 'load-money':
-        return Wallet;
-      default:
-        return CreditCard;
+      case 'water':
+      case 'internet':
+      case 'tv': return 'bills';
+      case 'bank-transfer': return 'transfer';
+      case 'load-money': return 'payment';
+      case 'airlines':
+      case 'bus':
+      case 'school': return 'payment';
+      default: return 'payment';
     }
   };
 
   const getTransactionTitle = () => {
     switch (type) {
-      case 'topup':
-        return `${operator} Topup`;
-      case 'bank-transfer':
-        return `${bank} Transfer`;
-      case 'electricity':
-        return `${provider} Bill Payment`;
-      case 'load-money':
-        return `Money Loaded via ${method}`;
-      default:
-        return 'Transaction';
+      case 'topup': return `${operator} Topup`;
+      case 'bank-transfer': return `${bank} Transfer`;
+      case 'electricity': return `${provider} Bill Payment`;
+      case 'water': return `${provider} Bill Payment`;
+      case 'internet': return `${provider} Bill Payment`;
+      case 'tv': return `${provider} Bill Payment`;
+      case 'load-money': return `Money Loaded via ${method}`;
+      case 'airlines': return `${provider} Booking`;
+      case 'bus': return `${provider} Ticket`;
+      case 'school': return `${provider} Fee Payment`;
+      default: return 'Transaction';
     }
+  };
+
+  const getTransactionSubtitle = () => {
+    switch (type) {
+      case 'topup': return 'Mobile Top-up';
+      case 'bank-transfer': return 'Bank Transfer';
+      case 'electricity': return 'Electricity Bill';
+      case 'water': return 'Water Bill';
+      case 'internet': return 'Internet Bill';
+      case 'tv': return 'TV Bill';
+      case 'load-money': return 'Money Loaded';
+      case 'airlines': return 'Flight Booking';
+      case 'bus': return 'Bus Ticket';
+      case 'school': return 'School Fee';
+      default: return 'Payment';
+    }
+  };
+
+  const getRecipient = () => {
+    return accountName || customerName || passengerName || studentName || phoneNumber || 'N/A';
+  };
+
+  const getProvider = () => {
+    return operator || bank || provider || method || 'eSewa';
   };
 
   const getDestinationInfo = () => {
@@ -84,9 +172,18 @@ export default function PaymentSuccessScreen() {
       case 'bank-transfer':
         return { label: 'Account Number', value: accountNumber };
       case 'electricity':
+      case 'water':
+      case 'internet':
+      case 'tv':
         return { label: 'Customer Number', value: customerNumber };
       case 'load-money':
         return { label: 'Load Method', value: method };
+      case 'airlines':
+        return { label: 'Passenger Name', value: passengerName };
+      case 'bus':
+        return { label: 'Passenger Name', value: passengerName };
+      case 'school':
+        return { label: 'Student Name', value: studentName };
       default:
         return { label: 'Reference', value: 'N/A' };
     }
@@ -99,15 +196,21 @@ export default function PaymentSuccessScreen() {
       case 'bank-transfer':
         return { label: 'Bank Name', value: bank };
       case 'electricity':
+      case 'water':
+      case 'internet':
+      case 'tv':
         return { label: 'Service Provider', value: provider?.toUpperCase() };
       case 'load-money':
         return { label: 'Service Provider', value: method?.toUpperCase() };
+      case 'airlines':
+      case 'bus':
+      case 'school':
+        return { label: 'Service Provider', value: provider?.toUpperCase() };
       default:
         return { label: 'Provider', value: 'eSewa' };
     }
   };
 
-  const ServiceIcon = getServiceIcon();
   const destinationInfo = getDestinationInfo();
   const providerInfo = getProviderInfo();
 
@@ -186,12 +289,12 @@ export default function PaymentSuccessScreen() {
           <View style={styles.transactionCard}>
             <View style={styles.transactionHeader}>
               <View style={styles.operatorIcon}>
-                <ServiceIcon size={20} color="#16a34a" />
+                <Text style={styles.operatorEmoji}>{getServiceIcon()}</Text>
               </View>
               <View style={styles.transactionInfo}>
                 <Text style={styles.transactionTitle}>{getTransactionTitle()}</Text>
                 <Text style={styles.transactionDate}>
-                  {formatDate(date)} {time}
+                  {formatDate(date as string)} {time}
                 </Text>
               </View>
               <Text style={[
@@ -456,6 +559,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  operatorEmoji: {
+    fontSize: 20,
   },
   transactionInfo: {
     flex: 1,

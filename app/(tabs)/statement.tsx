@@ -1,146 +1,52 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   Search, 
   Filter, 
   Calendar,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Receipt,
-  Smartphone,
-  Zap,
-  Gift
+  Download,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  MoreVertical
 } from 'lucide-react-native';
+import { usePaymentHistory } from '@/contexts/PaymentHistoryContext';
+import { useBalance } from '@/contexts/BalanceContext';
 
 export default function StatementScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const { payments, isLoading } = usePaymentHistory();
+  const { balance } = useBalance();
 
   const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'sent', label: 'Sent' },
-    { id: 'received', label: 'Received' },
-    { id: 'bills', label: 'Bills' },
-    { id: 'topup', label: 'Top-up' },
+    { id: 'all', label: 'All', color: '#64748b' },
+    { id: 'payment', label: 'Payments', color: '#059669' },
+    { id: 'transfer', label: 'Transfers', color: '#1E40AF' },
+    { id: 'bills', label: 'Bills', color: '#EAB308' },
+    { id: 'topup', label: 'Top-ups', color: '#7C3AED' },
   ];
 
-  const transactions = [
-    {
-      id: 1,
-      type: 'sent',
-      title: 'Ram Sharma',
-      subtitle: 'Money Transfer',
-      amount: -2500,
-      date: '2024-01-20',
-      time: '2:30 PM',
-      status: 'completed',
-      icon: ArrowUpRight,
-      color: '#DC2626'
-    },
-    {
-      id: 2,
-      type: 'received',
-      title: 'Sita Devi',
-      subtitle: 'Money Received',
-      amount: +1200,
-      date: '2024-01-20',
-      time: '1:15 PM',
-      status: 'completed',
-      icon: ArrowDownLeft,
-      color: '#059669'
-    },
-    {
-      id: 3,
-      type: 'bills',
-      title: 'Nepal Electricity Authority',
-      subtitle: 'Electricity Bill',
-      amount: -850,
-      date: '2024-01-20',
-      time: '12:45 PM',
-      status: 'completed',
-      icon: Zap,
-      color: '#EAB308'
-    },
-    {
-      id: 4,
-      type: 'topup',
-      title: 'Ncell Recharge',
-      subtitle: 'Mobile Top-up',
-      amount: -100,
-      date: '2024-01-19',
-      time: '8:20 PM',
-      status: 'completed',
-      icon: Smartphone,
-      color: '#EA580C'
-    },
-    {
-      id: 5,
-      type: 'sent',
-      title: 'Maya Gurung',
-      subtitle: 'Money Transfer',
-      amount: -5000,
-      date: '2024-01-19',
-      time: '3:45 PM',
-      status: 'completed',
-      icon: ArrowUpRight,
-      color: '#DC2626'
-    },
-    {
-      id: 6,
-      type: 'bills',
-      title: 'Worldlink Internet',
-      subtitle: 'Internet Bill',
-      amount: -1200,
-      date: '2024-01-19',
-      time: '11:30 AM',
-      status: 'completed',
-      icon: Receipt,
-      color: '#7C3AED'
-    },
-    {
-      id: 7,
-      type: 'received',
-      title: 'Krishna Bahadur',
-      subtitle: 'Money Received',
-      amount: +3500,
-      date: '2024-01-18',
-      time: '6:15 PM',
-      status: 'completed',
-      icon: ArrowDownLeft,
-      color: '#059669'
-    },
-    {
-      id: 8,
-      type: 'bills',
-      title: 'Khanepani Company',
-      subtitle: 'Water Bill',
-      amount: -450,
-      date: '2024-01-18',
-      time: '2:10 PM',
-      status: 'completed',
-      icon: Receipt,
-      color: '#3B82F6'
-    },
-  ];
-
-  const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = transaction.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         transaction.subtitle.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = selectedFilter === 'all' || transaction.type === selectedFilter;
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = payment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         payment.subtitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         payment.transactionId.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = selectedFilter === 'all' || payment.category === selectedFilter;
     return matchesSearch && matchesFilter;
   });
 
-  const groupedTransactions = filteredTransactions.reduce((groups, transaction) => {
-    const date = transaction.date;
+  const groupedPayments = filteredPayments.reduce((groups, payment) => {
+    const date = payment.date;
     if (!groups[date]) {
       groups[date] = [];
     }
-    groups[date].push(transaction);
+    groups[date].push(payment);
     return groups;
-  }, {});
+  }, {} as Record<string, typeof payments>);
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today);
@@ -159,106 +65,237 @@ export default function StatementScreen() {
     }
   };
 
+  const calculateStats = () => {
+    const thisMonth = payments.filter(p => {
+      const paymentDate = new Date(p.date);
+      const now = new Date();
+      return paymentDate.getMonth() === now.getMonth() && 
+             paymentDate.getFullYear() === now.getFullYear();
+    });
+
+    const totalSpent = thisMonth
+      .filter(p => p.type !== 'load-money')
+      .reduce((sum, p) => sum + p.amount, 0);
+    
+    const totalLoaded = thisMonth
+      .filter(p => p.type === 'load-money')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    return { totalSpent, totalLoaded, transactionCount: thisMonth.length };
+  };
+
+  const stats = calculateStats();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    // Simulate refresh delay
+    setTimeout(() => setRefreshing(false), 1000);
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#16a34a" />
+          <Text style={styles.loadingText}>Loading transactions...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Transaction Statement</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton}>
-            <Calendar size={20} color="#64748b" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton}>
-            <Filter size={20} color="#64748b" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={20} color="#64748b" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search transactions..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#94a3b8"
-          />
-        </View>
-      </View>
-
-      {/* Filter Tabs */}
       <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            style={[
-              styles.filterTab,
-              selectedFilter === filter.id && styles.activeFilterTab
-            ]}
-            onPress={() => setSelectedFilter(filter.id)}
-          >
-            <Text style={[
-              styles.filterText,
-              selectedFilter === filter.id && styles.activeFilterText
-            ]}>
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Transactions List */}
-      <ScrollView style={styles.transactionsList} showsVerticalScrollIndicator={false}>
-        {Object.entries(groupedTransactions).map(([date, transactions]) => (
-          <View key={date} style={styles.dateGroup}>
-            <Text style={styles.dateHeader}>{formatDate(date)}</Text>
-            {transactions.map((transaction) => (
-              <TouchableOpacity key={transaction.id} style={styles.transactionItem}>
-                <View style={[styles.transactionIcon, { backgroundColor: transaction.color + '20' }]}>
-                  <transaction.icon size={20} color={transaction.color} />
-                </View>
-                <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionTitle}>{transaction.title}</Text>
-                  <Text style={styles.transactionSubtitle}>{transaction.subtitle}</Text>
-                  <Text style={styles.transactionTime}>{transaction.time}</Text>
-                </View>
-                <View style={styles.transactionAmount}>
-                  <Text style={[
-                    styles.amountText,
-                    { color: transaction.amount > 0 ? '#059669' : '#1f2937' }
-                  ]}>
-                    {transaction.amount > 0 ? '+' : ''}Rs. {Math.abs(transaction.amount).toLocaleString()}
-                  </Text>
-                  <Text style={styles.statusText}>
-                    {transaction.status === 'completed' ? 'Completed' : 'Pending'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Transaction Statement</Text>
+            <Text style={styles.headerSubtitle}>Track your spending & earnings</Text>
           </View>
-        ))}
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.headerButton}>
+              <Download size={20} color="#64748b" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerButton}>
+              <MoreVertical size={20} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsCard}>
+            <View style={styles.statItem}>
+              <View style={styles.statIconContainer}>
+                <DollarSign size={20} color="#16a34a" />
+              </View>
+              <View style={styles.statContent}>
+                <Text style={styles.statValue}>Rs. {balance.toFixed(2)}</Text>
+                <Text style={styles.statLabel}>Current Balance</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <TrendingDown size={16} color="#ef4444" />
+                <Text style={styles.statAmount}>Rs. {stats.totalSpent.toLocaleString()}</Text>
+              </View>
+              <Text style={styles.statTitle}>Spent This Month</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <TrendingUp size={16} color="#16a34a" />
+                <Text style={styles.statAmount}>Rs. {stats.totalLoaded.toLocaleString()}</Text>
+              </View>
+              <Text style={styles.statTitle}>Loaded This Month</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Search size={20} color="#64748b" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search transactions..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+        </View>
+
+        {/* Filter Tabs */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.filtersContainer}
+          contentContainerStyle={styles.filtersContent}
+        >
+          {filters.map((filter) => (
+            <TouchableOpacity
+              key={filter.id}
+              style={[
+                styles.filterTab,
+                selectedFilter === filter.id && [styles.activeFilterTab, { backgroundColor: filter.color }]
+              ]}
+              onPress={() => setSelectedFilter(filter.id)}
+            >
+              <Text style={[
+                styles.filterText,
+                selectedFilter === filter.id && styles.activeFilterText
+              ]}>
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Transactions List */}
+        <View style={styles.transactionsList}>
+          {Object.entries(groupedPayments).length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateTitle}>No transactions found</Text>
+              <Text style={styles.emptyStateText}>
+                {searchQuery ? 'Try adjusting your search terms' : 'Your transactions will appear here'}
+              </Text>
+            </View>
+          ) : (
+            Object.entries(groupedPayments).map(([date, transactions]) => (
+              <View key={date} style={styles.dateGroup}>
+                <View style={styles.dateHeader}>
+                  <Text style={styles.dateHeaderText}>{formatDate(date)}</Text>
+                  <Text style={styles.dateHeaderCount}>
+                    {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                
+                {transactions.map((transaction) => (
+                  <TouchableOpacity key={transaction.id} style={styles.transactionItem}>
+                    <View style={styles.transactionIcon}>
+                      <Text style={styles.transactionEmoji}>{transaction.icon}</Text>
+                    </View>
+                    
+                    <View style={styles.transactionDetails}>
+                      <Text style={styles.transactionTitle}>{transaction.title}</Text>
+                      <Text style={styles.transactionSubtitle}>{transaction.subtitle}</Text>
+                      <View style={styles.transactionMeta}>
+                        <Text style={styles.transactionTime}>{transaction.time}</Text>
+                        <View style={styles.transactionDot} />
+                        <Text style={styles.transactionId}>ID: {transaction.transactionId}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.transactionAmount}>
+                      <Text style={[
+                        styles.amountText,
+                        { color: transaction.type === 'load-money' ? '#059669' : '#1f2937' }
+                      ]}>
+                        {transaction.type === 'load-money' ? '+' : '-'}Rs. {transaction.amount.toLocaleString()}
+                      </Text>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(transaction.status) + '20' }]}>
+                        <Text style={[styles.statusText, { color: getStatusColor(transaction.status) }]}>
+                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return '#059669';
+    case 'pending':
+      return '#F59E0B';
+    case 'failed':
+      return '#DC2626';
+    default:
+      return '#64748b';
+  }
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+    fontFamily: 'Inter-Medium',
+    marginTop: 12,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 20,
+    backgroundColor: '#ffffff',
   },
   headerTitle: {
     fontSize: 24,
@@ -266,36 +303,104 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     fontFamily: 'Inter-Bold',
   },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+    marginTop: 2,
+  },
   headerActions: {
     flexDirection: 'row',
     gap: 8,
   },
   headerButton: {
     padding: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  },
+  statsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  statsCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0fdf4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  statContent: {
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    fontFamily: 'Inter-Bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statAmount: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    fontFamily: 'Inter-SemiBold',
+    marginLeft: 8,
+  },
+  statTitle: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   searchInput: {
     flex: 1,
@@ -305,7 +410,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
   },
   filtersContainer: {
-    marginBottom: 16,
+    backgroundColor: '#ffffff',
+    paddingBottom: 16,
   },
   filtersContent: {
     paddingHorizontal: 20,
@@ -314,14 +420,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   activeFilterTab: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+    borderColor: 'transparent',
   },
   filterText: {
     fontSize: 14,
@@ -335,16 +440,45 @@ const styles = StyleSheet.create({
   transactionsList: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
   },
   dateGroup: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   dateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  dateHeaderText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
     fontFamily: 'Inter-SemiBold',
-    marginBottom: 12,
+  },
+  dateHeaderCount: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
   },
   transactionItem: {
     flexDirection: 'row',
@@ -361,12 +495,16 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  transactionEmoji: {
+    fontSize: 20,
   },
   transactionDetails: {
     flex: 1,
@@ -383,11 +521,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     marginTop: 2,
   },
+  transactionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   transactionTime: {
     fontSize: 11,
     color: '#94a3b8',
     fontFamily: 'Inter-Regular',
-    marginTop: 2,
+  },
+  transactionDot: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#94a3b8',
+    marginHorizontal: 6,
+  },
+  transactionId: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontFamily: 'Inter-Regular',
   },
   transactionAmount: {
     alignItems: 'flex-end',
@@ -396,11 +550,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter-SemiBold',
+    marginBottom: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
   },
   statusText: {
     fontSize: 10,
-    color: '#059669',
-    fontFamily: 'Inter-Regular',
-    marginTop: 2,
+    fontWeight: '500',
+    fontFamily: 'Inter-Medium',
   },
 });

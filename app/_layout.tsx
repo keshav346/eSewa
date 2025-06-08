@@ -6,6 +6,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_7
 import { SplashScreen } from 'expo-router';
 import { BalanceProvider } from '@/contexts/BalanceContext';
 import { ProfileProvider } from '@/contexts/ProfileContext';
+import { PaymentHistoryProvider } from '@/contexts/PaymentHistoryContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,11 +33,13 @@ export default function RootLayout() {
   return (
     <ProfileProvider>
       <BalanceProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
+        <PaymentHistoryProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </PaymentHistoryProvider>
       </BalanceProvider>
     </ProfileProvider>
   );

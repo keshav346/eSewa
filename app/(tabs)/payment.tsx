@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, QrCode, Receipt, Clock, CircleCheck as CheckCircle, Circle as XCircle, ArrowUpRight, ArrowDownLeft, Smartphone, Zap } from 'lucide-react-native';
+import { Search, Filter, QrCode, Receipt, Clock, CircleCheck as CheckCircle, Circle as XCircle, ArrowUpRight, TrendingUp, Calendar, MoreVertical } from 'lucide-react-native';
+import { usePaymentHistory } from '@/contexts/PaymentHistoryContext';
 
 export default function PaymentScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const { payments, getRecentPayments } = usePaymentHistory();
 
   const filters = [
     { id: 'all', label: 'All' },
@@ -14,89 +17,16 @@ export default function PaymentScreen() {
     { id: 'failed', label: 'Failed' },
   ];
 
-  const payments = [
-    {
-      id: 1,
-      type: 'qr-payment',
-      merchant: 'Bhatbhateni Supermarket',
-      amount: 2450,
-      date: '2024-01-20',
-      time: '3:45 PM',
-      status: 'completed',
-      transactionId: 'TXN123456789',
-      icon: QrCode,
-      color: '#16a34a'
-    },
-    {
-      id: 2,
-      type: 'bill-payment',
-      merchant: 'Nepal Electricity Authority',
-      amount: 850,
-      date: '2024-01-20',
-      time: '2:30 PM',
-      status: 'completed',
-      transactionId: 'TXN123456788',
-      icon: Zap,
-      color: '#EAB308'
-    },
-    {
-      id: 3,
-      type: 'transfer',
-      merchant: 'Ram Sharma',
-      amount: 5000,
-      date: '2024-01-19',
-      time: '8:15 PM',
-      status: 'pending',
-      transactionId: 'TXN123456787',
-      icon: ArrowUpRight,
-      color: '#F59E0B'
-    },
-    {
-      id: 4,
-      type: 'topup',
-      merchant: 'Ncell Recharge',
-      amount: 100,
-      date: '2024-01-19',
-      time: '6:20 PM',
-      status: 'completed',
-      transactionId: 'TXN123456786',
-      icon: Smartphone,
-      color: '#EA580C'
-    },
-    {
-      id: 5,
-      type: 'qr-payment',
-      merchant: 'KFC Restaurant',
-      amount: 1250,
-      date: '2024-01-19',
-      time: '1:30 PM',
-      status: 'failed',
-      transactionId: 'TXN123456785',
-      icon: QrCode,
-      color: '#DC2626'
-    },
-    {
-      id: 6,
-      type: 'transfer',
-      merchant: 'Sita Devi',
-      amount: 3000,
-      date: '2024-01-18',
-      time: '4:45 PM',
-      status: 'completed',
-      transactionId: 'TXN123456784',
-      icon: ArrowUpRight,
-      color: '#16a34a'
-    },
-  ];
-
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = payment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          payment.transactionId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = selectedFilter === 'all' || payment.status === selectedFilter;
     return matchesSearch && matchesFilter;
   });
 
-  const getStatusIcon = (status) => {
+  const recentPayments = getRecentPayments(3);
+
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
         return CheckCircle;
@@ -109,7 +39,7 @@ export default function PaymentScreen() {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
         return '#059669';
@@ -122,7 +52,7 @@ export default function PaymentScreen() {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today);
@@ -140,98 +70,184 @@ export default function PaymentScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Payments</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton}>
-            <Filter size={20} color="#64748b" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Search size={20} color="#64748b" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search payments..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#94a3b8"
-          />
-        </View>
-      </View>
-
-      {/* Filter Tabs */}
       <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            style={[
-              styles.filterTab,
-              selectedFilter === filter.id && styles.activeFilterTab
-            ]}
-            onPress={() => setSelectedFilter(filter.id)}
-          >
-            <Text style={[
-              styles.filterText,
-              selectedFilter === filter.id && styles.activeFilterText
-            ]}>
-              {filter.label}
-            </Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>My Payments</Text>
+            <Text style={styles.headerSubtitle}>Manage your payment history</Text>
+          </View>
+          <TouchableOpacity style={styles.headerButton}>
+            <MoreVertical size={20} color="#64748b" />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        </View>
 
-      {/* Payments List */}
-      <ScrollView style={styles.paymentsList} showsVerticalScrollIndicator={false}>
-        {filteredPayments.map((payment) => {
-          const StatusIcon = getStatusIcon(payment.status);
-          const statusColor = getStatusColor(payment.status);
+        {/* Quick Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <TrendingUp size={20} color="#16a34a" />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={styles.statValue}>{payments.length}</Text>
+              <Text style={styles.statLabel}>Total Transactions</Text>
+            </View>
+          </View>
           
-          return (
-            <TouchableOpacity key={payment.id} style={styles.paymentItem}>
-              <View style={[styles.paymentIcon, { backgroundColor: payment.color + '20' }]}>
-                <payment.icon size={20} color={payment.color} />
-              </View>
-              <View style={styles.paymentDetails}>
-                <Text style={styles.paymentMerchant}>{payment.merchant}</Text>
-                <Text style={styles.paymentId}>ID: {payment.transactionId}</Text>
-                <Text style={styles.paymentDate}>{formatDate(payment.date)} • {payment.time}</Text>
-              </View>
-              <View style={styles.paymentRight}>
-                <Text style={styles.paymentAmount}>Rs. {payment.amount.toLocaleString()}</Text>
-                <View style={styles.statusContainer}>
-                  <StatusIcon size={12} color={statusColor} />
-                  <Text style={[styles.statusText, { color: statusColor }]}>
-                    {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Calendar size={20} color="#7C3AED" />
+            </View>
+            <View style={styles.statContent}>
+              <Text style={styles.statValue}>{recentPayments.length}</Text>
+              <Text style={styles.statLabel}>This Week</Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Quick Actions */}
-      <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.quickActionButton}>
-          <QrCode size={24} color="#16a34a" />
-          <Text style={styles.quickActionText}>Scan & Pay</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quickActionButton}>
-          <Receipt size={24} color="#16a34a" />
-          <Text style={styles.quickActionText}>Pay Bills</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Recent Payments */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Payments</Text>
+            <TouchableOpacity>
+              <Text style={styles.sectionAction}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.recentPayments}>
+            {recentPayments.map((payment) => {
+              const StatusIcon = getStatusIcon(payment.status);
+              const statusColor = getStatusColor(payment.status);
+              
+              return (
+                <TouchableOpacity key={payment.id} style={styles.recentPaymentItem}>
+                  <View style={styles.recentPaymentIcon}>
+                    <Text style={styles.recentPaymentEmoji}>{payment.icon}</Text>
+                  </View>
+                  <View style={styles.recentPaymentDetails}>
+                    <Text style={styles.recentPaymentTitle}>{payment.title}</Text>
+                    <Text style={styles.recentPaymentSubtitle}>{payment.subtitle}</Text>
+                  </View>
+                  <View style={styles.recentPaymentAmount}>
+                    <Text style={styles.recentPaymentValue}>
+                      Rs. {payment.amount.toLocaleString()}
+                    </Text>
+                    <View style={styles.recentPaymentStatus}>
+                      <StatusIcon size={10} color={statusColor} />
+                      <Text style={[styles.recentPaymentStatusText, { color: statusColor }]}>
+                        {payment.status}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Search size={20} color="#64748b" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search payments..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+        </View>
+
+        {/* Filter Tabs */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.filtersContainer}
+          contentContainerStyle={styles.filtersContent}
+        >
+          {filters.map((filter) => (
+            <TouchableOpacity
+              key={filter.id}
+              style={[
+                styles.filterTab,
+                selectedFilter === filter.id && styles.activeFilterTab
+              ]}
+              onPress={() => setSelectedFilter(filter.id)}
+            >
+              <Text style={[
+                styles.filterText,
+                selectedFilter === filter.id && styles.activeFilterText
+              ]}>
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Payments List */}
+        <View style={styles.paymentsList}>
+          {filteredPayments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateTitle}>No payments found</Text>
+              <Text style={styles.emptyStateText}>
+                {searchQuery ? 'Try adjusting your search terms' : 'Your payments will appear here'}
+              </Text>
+            </View>
+          ) : (
+            filteredPayments.map((payment) => {
+              const StatusIcon = getStatusIcon(payment.status);
+              const statusColor = getStatusColor(payment.status);
+              
+              return (
+                <TouchableOpacity key={payment.id} style={styles.paymentItem}>
+                  <View style={styles.paymentIcon}>
+                    <Text style={styles.paymentEmoji}>{payment.icon}</Text>
+                  </View>
+                  <View style={styles.paymentDetails}>
+                    <Text style={styles.paymentMerchant}>{payment.title}</Text>
+                    <Text style={styles.paymentId}>ID: {payment.transactionId}</Text>
+                    <Text style={styles.paymentDate}>{formatDate(payment.date)} • {payment.time}</Text>
+                  </View>
+                  <View style={styles.paymentRight}>
+                    <Text style={styles.paymentAmount}>Rs. {payment.amount.toLocaleString()}</Text>
+                    <View style={styles.statusContainer}>
+                      <StatusIcon size={12} color={statusColor} />
+                      <Text style={[styles.statusText, { color: statusColor }]}>
+                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.quickActionButton}>
+            <QrCode size={24} color="#16a34a" />
+            <Text style={styles.quickActionText}>Scan & Pay</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionButton}>
+            <Receipt size={24} color="#16a34a" />
+            <Text style={styles.quickActionText}>Pay Bills</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -244,9 +260,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 20,
+    backgroundColor: '#ffffff',
   },
   headerTitle: {
     fontSize: 24,
@@ -254,23 +271,140 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     fontFamily: 'Inter-Bold',
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+    marginTop: 2,
   },
   headerButton: {
     padding: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  statCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
+  },
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  statContent: {
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    fontFamily: 'Inter-Bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+  },
+  section: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    fontFamily: 'Inter-SemiBold',
+  },
+  sectionAction: {
+    fontSize: 14,
+    color: '#16a34a',
+    fontFamily: 'Inter-Medium',
+  },
+  recentPayments: {
+    gap: 12,
+  },
+  recentPaymentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 12,
+  },
+  recentPaymentIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  recentPaymentEmoji: {
+    fontSize: 16,
+  },
+  recentPaymentDetails: {
+    flex: 1,
+  },
+  recentPaymentTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1f2937',
+    fontFamily: 'Inter-Medium',
+  },
+  recentPaymentSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+    marginTop: 2,
+  },
+  recentPaymentAmount: {
+    alignItems: 'flex-end',
+  },
+  recentPaymentValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+    fontFamily: 'Inter-SemiBold',
+  },
+  recentPaymentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  recentPaymentStatusText: {
+    fontSize: 10,
+    fontWeight: '500',
+    fontFamily: 'Inter-Medium',
+    marginLeft: 4,
+    textTransform: 'capitalize',
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingVertical: 16,
   },
   searchBar: {
     flexDirection: 'row',
@@ -324,6 +458,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+  },
   paymentItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -342,9 +493,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  paymentEmoji: {
+    fontSize: 18,
   },
   paymentDetails: {
     flex: 1,
