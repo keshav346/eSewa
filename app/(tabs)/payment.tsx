@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Filter, QrCode, Receipt, Clock, CircleCheck as CheckCircle, Circle as XCircle, ArrowUpRight, TrendingUp, Calendar, MoreVertical } from 'lucide-react-native';
+import { Search, Filter, QrCode, Receipt, Clock, CircleCheck as CheckCircle, Circle as XCircle, ArrowUpRight, TrendingUp, Calendar, MoveVertical as MoreVertical } from 'lucide-react-native';
 import { usePaymentHistory } from '@/contexts/PaymentHistoryContext';
 
 export default function PaymentScreen() {
