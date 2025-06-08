@@ -3,7 +3,28 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Search, User, Bell, Eye, EyeOff, Smartphone, Zap, Droplets, Wifi, Plane, Bus, Tv, GraduationCap, CreditCard, Building, Shield, Gift, MoveHorizontal as MoreHorizontal, ArrowUpRight, ArrowDownLeft, Banknote, Send, QrCode, ChevronDown } from 'lucide-react-native';
+import { 
+  Search, 
+  User, 
+  Bell, 
+  Eye, 
+  EyeOff, 
+  MoreHorizontal,
+  ArrowUpRight,
+  ChevronDown,
+  CreditCard,
+  Send,
+  Building2,
+  Repeat,
+  Smartphone,
+  Lightbulb,
+  Droplets,
+  Wifi,
+  Plane,
+  Bus,
+  Tv,
+  GraduationCap
+} from 'lucide-react-native';
 import { useBalance } from '@/contexts/BalanceContext';
 
 export default function HomeScreen() {
@@ -12,28 +33,81 @@ export default function HomeScreen() {
   const { formatBalance } = useBalance();
 
   const quickActions = [
-    { icon: CreditCard, label: 'Load Money', color: '#16a34a', onPress: () => router.push('/load-money') },
-    { icon: Send, label: 'Send Money', color: '#16a34a', onPress: () => router.push('/send') },
-    { icon: Building, label: 'Bank Transfer', color: '#16a34a', onPress: () => router.push('/bank-transfer') },
-    { icon: ArrowUpRight, label: 'Remittance', color: '#16a34a', onPress: () => {} },
+    { 
+      icon: CreditCard, 
+      label: 'Load Money', 
+      color: '#16a34a', 
+      onPress: () => router.push('/load-money') 
+    },
+    { 
+      icon: Send, 
+      label: 'Send Money', 
+      color: '#16a34a', 
+      onPress: () => router.push('/send') 
+    },
+    { 
+      icon: Building2, 
+      label: 'Bank Transfer', 
+      color: '#16a34a', 
+      onPress: () => router.push('/bank-transfer') 
+    },
+    { 
+      icon: Repeat, 
+      label: 'Remittance', 
+      color: '#16a34a', 
+      onPress: () => {} 
+    },
   ];
 
   const services = [
-    { icon: Smartphone, label: 'Topup', color: '#16a34a', onPress: () => router.push('/topup') },
-    { icon: Zap, label: 'Electricity', color: '#16a34a', onPress: () => router.push('/electricity') },
-    { icon: Droplets, label: 'Khanepani', color: '#16a34a', onPress: () => router.push('/water') },
-    { icon: Wifi, label: 'Internet', color: '#16a34a', onPress: () => router.push('/internet') },
-    { icon: Plane, label: 'Airlines', color: '#16a34a', onPress: () => router.push('/airlines') },
-    { icon: Bus, label: 'Bus Ticket', color: '#16a34a', onPress: () => router.push('/bus') },
-    { icon: Tv, label: 'TV', color: '#16a34a', onPress: () => router.push('/tv') },
-    { icon: GraduationCap, label: 'School Fee', color: '#16a34a', onPress: () => router.push('/school') },
-  ];
-
-  const moreServices = [
-    'Insurance', 'International Airlines', 'Hotels', 'Govt. Payment',
-    'Microfinance', 'Cooperative', 'Fixed Deposit', 'Fee',
-    'Donation', 'Mutual Fund', 'Credit Card', 'Insurance',
-    'Education', 'Movies', 'Transportation', 'Hotel'
+    { 
+      icon: Smartphone, 
+      label: 'Topup', 
+      color: '#16a34a', 
+      onPress: () => router.push('/topup') 
+    },
+    { 
+      icon: Lightbulb, 
+      label: 'Electricity', 
+      color: '#16a34a', 
+      onPress: () => router.push('/electricity') 
+    },
+    { 
+      icon: Droplets, 
+      label: 'Khanepani', 
+      color: '#16a34a', 
+      onPress: () => router.push('/water') 
+    },
+    { 
+      icon: Wifi, 
+      label: 'Internet', 
+      color: '#16a34a', 
+      onPress: () => router.push('/internet') 
+    },
+    { 
+      icon: Plane, 
+      label: 'Airlines', 
+      color: '#16a34a', 
+      onPress: () => router.push('/airlines') 
+    },
+    { 
+      icon: Bus, 
+      label: 'Bus Ticket', 
+      color: '#16a34a', 
+      onPress: () => router.push('/bus') 
+    },
+    { 
+      icon: Tv, 
+      label: 'TV', 
+      color: '#16a34a', 
+      onPress: () => router.push('/tv') 
+    },
+    { 
+      icon: GraduationCap, 
+      label: 'School Fee', 
+      color: '#16a34a', 
+      onPress: () => router.push('/school') 
+    },
   ];
 
   const popularServices = [
@@ -120,11 +194,11 @@ export default function HomeScreen() {
           {quickActions.map((action, index) => (
             <TouchableOpacity key={index} style={styles.quickActionItem} onPress={action.onPress}>
               <View style={styles.quickActionIconContainer}>
-                <View style={styles.quickActionIcon}>
-                  <action.icon size={20} color="#ffffff" />
+                <View style={[styles.quickActionIcon, { backgroundColor: action.color }]}>
+                  <action.icon size={18} color="#ffffff" />
                 </View>
                 <View style={styles.quickActionArrow}>
-                  <ArrowUpRight size={10} color="#16a34a" />
+                  <ArrowUpRight size={8} color="#16a34a" />
                 </View>
               </View>
               <Text style={styles.quickActionLabel}>{action.label}</Text>
@@ -137,8 +211,8 @@ export default function HomeScreen() {
           <View style={styles.servicesGrid}>
             {services.map((service, index) => (
               <TouchableOpacity key={index} style={styles.serviceItem} onPress={service.onPress}>
-                <View style={styles.serviceIconContainer}>
-                  <service.icon size={24} color="#16a34a" />
+                <View style={[styles.serviceIconContainer, { backgroundColor: service.color + '15' }]}>
+                  <service.icon size={22} color={service.color} />
                 </View>
                 <Text style={styles.serviceLabel}>{service.label}</Text>
               </TouchableOpacity>
@@ -197,40 +271,6 @@ export default function HomeScreen() {
               onChangeText={setSearchQuery}
               placeholderTextColor="#9ca3af"
             />
-          </View>
-        </View>
-
-        {/* More Services */}
-        <View style={styles.moreServicesContainer}>
-          <View style={styles.moreServicesGrid}>
-            {moreServices.map((service, index) => (
-              <TouchableOpacity key={index} style={styles.moreServiceItem}>
-                <Text style={styles.moreServiceText}>{service}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Utility Bill Payment */}
-        <View style={styles.utilitySection}>
-          <Text style={styles.utilitySectionTitle}>Utility Bill Payment</Text>
-          <View style={styles.utilityGrid}>
-            <TouchableOpacity style={styles.utilityItem} onPress={() => router.push('/electricity')}>
-              <Zap size={20} color="#16a34a" />
-              <Text style={styles.utilityText}>NEA</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.utilityItem} onPress={() => router.push('/water')}>
-              <Droplets size={20} color="#16a34a" />
-              <Text style={styles.utilityText}>KUKL</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.utilityItem} onPress={() => router.push('/internet')}>
-              <Wifi size={20} color="#16a34a" />
-              <Text style={styles.utilityText}>Worldlink</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.utilityItem} onPress={() => router.push('/(tabs)/payment')}>
-              <QrCode size={20} color="#16a34a" />
-              <Text style={styles.utilityText}>My Payment</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -356,10 +396,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   quickActionIcon: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 8,
-    backgroundColor: '#16a34a',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -367,9 +406,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -404,10 +443,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   serviceIconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: '#f0fdf4',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -545,56 +583,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     fontFamily: 'Inter-Regular',
-  },
-  moreServicesContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  moreServicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  moreServiceItem: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  moreServiceText: {
-    fontSize: 11,
-    color: '#374151',
-    fontFamily: 'Inter-Regular',
-  },
-  utilitySection: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  utilitySectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 12,
-  },
-  utilityGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  utilityItem: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 4,
-  },
-  utilityText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#374151',
-    fontFamily: 'Inter-Medium',
   },
 });
