@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  Search, 
-  Filter, 
-  Calendar,
-  Download,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  MoreVertical
-} from 'lucide-react-native';
+import { Search, Filter, Calendar, Download, TrendingUp, TrendingDown, DollarSign, MoveVertical as MoreVertical } from 'lucide-react-native';
 import { usePaymentHistory } from '@/contexts/PaymentHistoryContext';
 import { useBalance } from '@/contexts/BalanceContext';
 
