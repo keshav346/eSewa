@@ -3,28 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { 
-  Search, 
-  User, 
-  Bell, 
-  Eye, 
-  EyeOff, 
-  MoreHorizontal,
-  ArrowUpRight,
-  ChevronDown,
-  CreditCard,
-  Send,
-  Building2,
-  Repeat,
-  Smartphone,
-  Lightbulb,
-  Droplets,
-  Wifi,
-  Plane,
-  Bus,
-  Tv,
-  GraduationCap
-} from 'lucide-react-native';
+import { Search, User, Bell, Eye, EyeOff, MoveHorizontal as MoreHorizontal, ArrowUpRight, ChevronDown, CreditCard, Send, Building2, Repeat, Smartphone, Lightbulb, Droplets, Wifi, Plane, Bus, Tv, GraduationCap } from 'lucide-react-native';
 import { useBalance } from '@/contexts/BalanceContext';
 
 export default function HomeScreen() {
